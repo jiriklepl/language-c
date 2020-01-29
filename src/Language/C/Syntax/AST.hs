@@ -55,7 +55,12 @@ module Language.C.Syntax.AST (
   CConst, CStrLit, cstringOfLit, liftStrLit,
   CConstant(..), CStringLiteral(..),
   -- * Annoated type class
-  Annotated(..)
+  Annotated(..),
+  -- CHM goes here
+  CHMStructDef, CHMStructureDef(..),
+  CHMFunDef, CHMFunctionDef(..),
+  CHMHead, CHMHeader(..),
+  CHMConstr, CHMConstraint(..)
 ) where
 import Language.C.Syntax.Constants
 import Language.C.Syntax.Ops
@@ -84,6 +89,8 @@ type CExtDecl = CExternalDeclaration NodeInfo
 data CExternalDeclaration a
   = CDeclExt (CDeclaration a)
   | CFDefExt (CFunctionDef a)
+  | CHMFDefExt (CHMFunctionDef a)  -- CHM addition
+  | CHMSDefExt (CHMStructureDef a) -- CHM addition
   | CAsmExt  (CStringLiteral a) a
     deriving (Show, Data,Typeable, Generic, Generic1 {-! ,CNode ,Functor, Annotated !-})
 
@@ -805,6 +812,47 @@ class (Functor ast) => Annotated ast where
 -- fmap2 :: (a->a') -> (a,b) -> (a',b)
 -- fmap2 f (a,b) = (f a, b)
 
+-- CHM goes here
+type CHMStructDef = CHMStructureDef NodeInfo
+data CHMStructureDef a
+  = CHMStructDef
+    (CHMHeader a)
+    (CStructureUnion a)       -- structure itself
+    a
+    deriving (Show, Data,Typeable, Generic, Generic1 {-! ,CNode ,Functor ,Annotated !-})
+
+instance NFData a => NFData (CHMStructureDef a)
+
+type CHMFunDef = CHMFunctionDef NodeInfo
+data CHMFunctionDef a
+  = CHMFunDef
+    (CHMHeader a)
+    (CFunctionDef a)          -- function itself
+    a
+    deriving (Show, Data,Typeable, Generic, Generic1 {-! ,CNode ,Functor ,Annotated !-})
+
+instance NFData a => NFData (CHMFunctionDef a)
+
+type CHMHead = CHMHeader NodeInfo
+data CHMHeader a
+  = CHMHead
+    [Ident]                   -- type parameters
+    [CHMConstraint a]         -- optional constraints
+    a
+    deriving (Show, Data,Typeable, Generic, Generic1 {-! ,CNode ,Functor ,Annotated !-})
+
+instance NFData a => NFData (CHMHeader a)
+
+type CHMConstr = CHMConstraint NodeInfo
+data CHMConstraint a
+  = CHMConstr
+    Ident                     -- type
+    [[CDeclSpec]]             -- parameters
+    a
+    deriving (Show, Data,Typeable, Generic, Generic1 {-! ,CNode ,Functor ,Annotated !-})
+
+instance NFData a => NFData (CHMConstraint a)
+
 -- Instances generated using derive-2.*
 -- GENERATED START
 
@@ -824,6 +872,8 @@ instance Annotated CTranslationUnit where
 instance CNode t1 => CNode (CExternalDeclaration t1) where
         nodeInfo (CDeclExt d) = nodeInfo d
         nodeInfo (CFDefExt d) = nodeInfo d
+        nodeInfo (CHMFDefExt d) = nodeInfo d
+        nodeInfo (CHMSDefExt d) = nodeInfo d
         nodeInfo (CAsmExt _ n) = nodeInfo n
 instance CNode t1 => Pos (CExternalDeclaration t1) where
         posOf x = posOf (nodeInfo x)
@@ -831,11 +881,15 @@ instance CNode t1 => Pos (CExternalDeclaration t1) where
 instance Functor CExternalDeclaration where
         fmap _f (CDeclExt a1) = CDeclExt (fmap _f a1)
         fmap _f (CFDefExt a1) = CFDefExt (fmap _f a1)
+        fmap _f (CHMFDefExt a1) = CHMFDefExt (fmap _f a1)
+        fmap _f (CHMSDefExt a1) = CHMSDefExt (fmap _f a1)
         fmap _f (CAsmExt a1 a2) = CAsmExt (fmap _f a1) (_f a2)
 
 instance Annotated CExternalDeclaration where
         annotation (CDeclExt n) = annotation n
         annotation (CFDefExt n) = annotation n
+        annotation (CHMFDefExt n) = annotation n
+        annotation (CHMSDefExt n) = annotation n
         annotation (CAsmExt _ n) = n
         amap f (CDeclExt n) = CDeclExt (amap f n)
         amap f (CFDefExt n) = CFDefExt (amap f n)
@@ -1457,3 +1511,61 @@ instance Annotated CStringLiteral where
         annotation (CStrLit _ n) = n
         amap f (CStrLit a_1 a_2) = CStrLit a_1 (f a_2)
 -- GENERATED STOP
+
+-- CHM goes here
+
+-- Structures start from here:
+instance Annotated CHMStructureDef where
+        annotation (CHMStructDef _ _ n) = n
+        amap f (CHMStructDef a1 a2 a3) = CHMStructDef (amap f a1) (amap f a2) (f a3)
+
+instance Functor CHMStructureDef where
+        fmap f (CHMStructDef a1 a2 a3) = CHMStructDef (fmap f a1) (fmap f a2) (f a3)
+
+instance CNode t1 => CNode (CHMStructureDef t1) where
+        nodeInfo (CHMStructDef _ _ n) = nodeInfo n
+
+instance CNode t1 => Pos (CHMStructureDef t1) where
+        posOf x = posOf (nodeInfo x)
+
+-- Functions start from here:
+instance Annotated CHMFunctionDef where
+        annotation (CHMFunDef _ _ n) = n
+        amap f (CHMFunDef a1 a2 a3) = CHMFunDef (amap f a1) (amap f a2) (f a3)
+
+instance Functor CHMFunctionDef where
+        fmap f (CHMFunDef a1 a2 a3) = CHMFunDef (fmap f a1) (fmap f a2) (f a3)
+
+instance CNode t1 => CNode (CHMFunctionDef t1) where
+        nodeInfo (CHMFunDef _ _ n) = nodeInfo n
+
+instance CNode t1 => Pos (CHMFunctionDef t1) where
+        posOf x = posOf (nodeInfo x)
+
+-- Header start from here:
+instance Annotated CHMHeader where
+        annotation (CHMHead _ _ n) = n
+        amap f (CHMHead a1 a2 a3) = CHMHead a1 (map (amap f) a2) (f a3)
+
+instance Functor CHMHeader where
+        fmap f (CHMHead a1 a2 a3) = CHMHead a1 (map (fmap f) a2) (f a3)
+
+instance CNode t1 => CNode (CHMHeader t1) where
+        nodeInfo (CHMHead _ _ n) = nodeInfo n
+
+instance CNode t1 => Pos (CHMHeader t1) where
+        posOf x = posOf (nodeInfo x)
+
+-- Constraints start from here:
+instance Annotated CHMConstraint where
+        annotation (CHMConstr _ _ n) = n
+        amap f (CHMConstr a1 a2 a3) = CHMConstr a1 a2 (f a3)
+
+instance Functor CHMConstraint where
+        fmap f (CHMConstr a1 a2 a3) = CHMConstr a1 a2 (f a3)
+
+instance CNode t1 => CNode (CHMConstraint t1) where
+        nodeInfo (CHMConstr _ _ n) = nodeInfo n
+
+instance CNode t1 => Pos (CHMConstraint t1) where
+        posOf x = posOf (nodeInfo x)

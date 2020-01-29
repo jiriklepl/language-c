@@ -260,6 +260,10 @@ clangcversion   { CTokClangC _ (ClangCVersionTok $$) } -- Clang version literal
 "__global"	{ CTokClGlobal	_ }             -- OpenCL global variable
 "__local"	{ CTokClLocal	_ }             -- OpenCL local variable
 
+-- CHM goes here
+"class"	{ CHMClass	_ }
+"instance"	{ CHMInstance	_ }
+
 %%
 
 
@@ -293,9 +297,11 @@ ext_decl_list
 external_declaration :: { CExtDecl }
 external_declaration
   : function_definition		                  { CFDefExt $1 }
-  | declaration			                  { CDeclExt $1 }
-  | "__extension__" external_declaration          { $2 }
-  | asm '(' string_literal ')' ';'		  {% withNodeInfo $1 $ CAsmExt $3 }
+  | chm_function_definition        { CHMFDefExt $1 }  -- CHM addition
+  | chm_structure_definition       { CHMSDefExt $1 }  -- CHM addition
+  | declaration			                        { CDeclExt $1 }
+  | "__extension__" external_declaration    { $2 }
+  | asm '(' string_literal ')' ';'		      {% withNodeInfo $1 $ CAsmExt $3 }
 
 
 -- parse C function definition (C99 6.9.1)
@@ -2155,6 +2161,41 @@ attribute_params
   | attribute_params ',' constant_expression	{ $1 `snoc` $3 }
   | attribute_params ',' unary_expression assignment_operator unary_expression { $1 }
   | attribute_params ',' unary_expression assignment_operator clang_version_literal { $1 }
+
+-- CHM goes here
+chm_structure_definition :: { CHMStructDef }
+chm_structure_definition
+  : chm_header struct_or_union_specifier ';'
+    {% leaveScope >> (withNodeInfo $2 $ CHMStructDef $1 $2) }
+
+chm_function_definition :: { CHMFunDef }
+chm_function_definition
+  : chm_header function_definition
+    {% leaveScope >> (withNodeInfo $2 $ CHMFunDef $1 $2) }
+
+chm_header :: { CHMHead }
+chm_header
+  : '<' newtype_list '>' {% withNodeInfo $2 $ CHMHead (reverse $2) [] }
+  | '<' newtype_list ':' chm_constraint_list '>' {% withNodeInfo $2 $ CHMHead (reverse $2) (reverse $4) }
+  | '<' ':' chm_constraint_list '>' {% enterScope >> (withNodeInfo $3 $ CHMHead [] (reverse $3)) }
+
+newtype_list :: { Reversed [Ident] }
+newtype_list
+  : ident {% enterScope >> addTypedef $1 >> return (singleton $1) }
+  | newtype_list ',' ident {% addTypedef $3 >> return ($1 `snoc` $3) }
+
+chm_constraint_list :: { Reversed [CHMConstr] }
+chm_constraint_list
+  : chm_constraint { singleton $1 }
+  | chm_constraint_list ',' chm_constraint { $1 `snoc` $3 }
+
+chm_constraint :: { CHMConstr }
+chm_constraint
+  : ident '<' chm_type_list '>' {% withNodeInfo $1 $ CHMConstr $1 (reverse $3)  }
+
+chm_type_list :: { Reversed [[CDeclSpec]] }
+  : type_specifier { singleton $1 }
+  | chm_type_list ',' type_specifier { $1 `snoc` $3 }
 
 {
 

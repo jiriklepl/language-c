@@ -72,7 +72,7 @@ ii = nest 4
 instance Pretty CTranslUnit where
     pretty (CTranslUnit edecls _) = vcat (map pretty edecls)
 
--- | Pretty print the given tranlation unit, but replace declarations from header files with @#include@ directives.
+-- | Pretty print the given translation unit, but replace declarations from header files with @#include@ directives.
 --
 -- The resulting file may not compile (because of missing @#define@ directives and similar things), but is very useful
 -- for testing, as otherwise the pretty printed file will be cluttered with declarations from system headers.
@@ -98,6 +98,7 @@ prettyUsingInclude (CTranslUnit edecls _) =
 instance Pretty CExtDecl where
     pretty (CDeclExt decl) = pretty decl <> semi
     pretty (CFDefExt fund) = pretty fund
+    pretty (CHMFDefExt temp) = pretty temp -- CHM addition
     pretty (CAsmExt  asmStmt _) = text "asm" <> parens (pretty asmStmt) <> semi
 
 -- TODO: Check that old-style and new-style aren't mixed
@@ -249,7 +250,7 @@ instance Pretty CTypeSpec where
     pretty (CLongType _)        = text "long"
     pretty (CFloatType _)       = text "float"
     pretty (CFloatNType n x _)  = text "_Float" <> text (show n) <>
-                                  (if x then text "x" else empty) 
+                                  (if x then text "x" else empty)
     pretty (CDoubleType _)      = text "double"
     pretty (CSignedType _)      = text "signed"
     pretty (CUnsigType _)       = text "unsigned"
@@ -550,3 +551,34 @@ binPrec CXorOp = 14
 binPrec COrOp  = 13
 binPrec CLndOp = 12
 binPrec CLorOp = 11
+
+-- CHM goes here
+chmBrackets :: Doc -> Doc
+chmBrackets expr = text "<" <> expr <> text ">"
+
+instance Pretty CHMStructDef where
+    pretty (CHMStructDef header struct _) =
+        pretty header $$
+        pretty struct
+
+instance Pretty CHMFunDef where
+    pretty (CHMFunDef header func _) =
+        pretty header $$
+        pretty func
+
+instance Pretty CHMHead where
+    pretty (CHMHead idents constraints _) =
+        chmBrackets $
+        (hsep . punctuate comma . map identP) idents <>
+        (if null constraints
+            then mempty
+            else space <>
+                 text ":" <>
+                 space <>
+                 (hsep . punctuate comma . map pretty) constraints <>
+                 space)
+
+instance Pretty CHMConstr where
+    pretty (CHMConstr ident specss _) =
+        identP ident <>
+        (chmBrackets . hsep . punctuate comma) [pretty x | specs <- specss, x <- specs]
