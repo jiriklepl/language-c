@@ -8,8 +8,8 @@ Copyright:      LICENSE
 Author:         AUTHORS
 Maintainer:     jiriklepl@seznam.cz
 Stability:      experimental
-Homepage:       https://github.com/jiriklepl/C-with-Hindley-Milner-Type-System
-Bug-reports:    https://github.com/jiriklepl/C-with-Hindley-Milner-Type-System/issues
+Homepage:       https://github.com/jiriklepl/language-chm
+Bug-reports:    https://github.com/jiriklepl/language-chm/issues
 
 Synopsis:       Analysis and generation of C code
 Description:    Language C is a haskell library for the analysis and generation of C code.
