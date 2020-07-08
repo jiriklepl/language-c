@@ -2169,8 +2169,11 @@ attribute_params
 -- CHM goes here
 chm_class_definition :: { CHMCDef }
 chm_class_definition
-  : "class" ident chm_header '{' ext_decl_list '}'
-    {% leaveScope >> (withNodeInfo $2 $ CHMCDef $2 $3 (reverse $5)) }
+  : chm_header "class" ident chm_param_list '{' ext_decl_list '}'
+    {% leaveScope >> (withNodeInfo $3 $ CHMCDefParams $3 $1 $4 (reverse $6)) }
+
+  | chm_header "class" ident '{' ext_decl_list '}'
+    {% leaveScope >> (withNodeInfo $3 $ CHMCDef $3 $1 (reverse $5)) }
 
 chm_instance_definition :: { CHMIDef }
 chm_instance_definition

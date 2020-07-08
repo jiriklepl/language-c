@@ -563,11 +563,18 @@ chmBlock :: Doc -> Doc
 chmBlock block = char '{' $+$ ii block $$ char '}'
 
 instance Pretty CHMCDef where
-    pretty (CHMCDef ident header decl _) =
+    pretty (CHMCDefParams ident header params decl _) =
+        pretty header $$
         text "class" <+>
         identP ident <+>
+        pretty params $$
+        (chmBlock . vcat . fmap pretty) decl
+
+    pretty (CHMCDef ident header decl _) =
         pretty header $$
-        (chmBlock . vcat . (fmap pretty)) decl
+        text "class" <+>
+        identP ident <+>
+        (chmBlock . vcat . fmap pretty) decl
 
 instance Pretty CHMIDef where
     pretty (CHMIDefHead ident header params decl a) =
@@ -578,7 +585,7 @@ instance Pretty CHMIDef where
         text "instance" <+>
         identP ident <+>
         pretty params $$
-        (chmBlock . vcat . (fmap pretty)) decl
+        (chmBlock . vcat . fmap pretty) decl
 
 
 instance Pretty CHMStructDef where

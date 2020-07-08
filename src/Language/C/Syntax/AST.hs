@@ -823,7 +823,13 @@ class (Functor ast) => Annotated ast where
 -- CHM goes here
 type CHMCDef = CHMClassDef NodeInfo
 data CHMClassDef a
-  = CHMCDef
+  = CHMCDefParams
+    Ident
+    (CHMHeader a)
+    (CHMParameters a)
+    [CExternalDeclaration a]       -- declarations
+    a
+  | CHMCDef
     Ident
     (CHMHeader a)
     [CExternalDeclaration a]       -- declarations
@@ -1583,13 +1589,17 @@ instance Annotated CStringLiteral where
 
 -- Classes start from here:
 instance Annotated CHMClassDef where
+        annotation (CHMCDefParams _ _ _ _ n) = n
         annotation (CHMCDef _ _ _ n) = n
+        amap f (CHMCDefParams a1 a2 a3 a4 a5) = CHMCDefParams a1 (amap f a2) (amap f a3) (amap f <$> a4) (f a5)
         amap f (CHMCDef a1 a2 a3 a4) = CHMCDef a1 (amap f a2) (amap f <$> a3) (f a4)
 
 instance Functor CHMClassDef where
+        fmap f (CHMCDefParams a1 a2 a3 a4 a5) = CHMCDefParams a1 (fmap f a2) (fmap f a3) (fmap f <$> a4) (f a5)
         fmap f (CHMCDef a1 a2 a3 a4) = CHMCDef a1 (fmap f a2) (fmap f <$> a3) (f a4)
 
 instance CNode t1 => CNode (CHMClassDef t1) where
+        nodeInfo (CHMCDefParams _ _ _ _ n) = nodeInfo n
         nodeInfo (CHMCDef _ _ _ n) = nodeInfo n
 
 instance CNode t1 => Pos (CHMClassDef t1) where
